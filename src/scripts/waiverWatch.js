@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// Hardcoded league ID
+// Hardcoded league ID for the CRFFL
 const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
@@ -31,14 +31,17 @@ const PERSONAS = [
 ];
 
 async function getSleeperTransactions() {
-    console.log(`Checking Sleeper transactions for league ${SLEEPER_LEAGUE_ID}...`);
+    console.log("Checking Sleeper league activity...");
     try {
+        // Try fetching transactions for the current week
         const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
-        return response.data || [];
+        if (response.data && response.data.length > 0) {
+            return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
+        }
     } catch (error) {
-        console.log("Note: Off-season window or active week not found. Bypassing transaction check and focusing on live news analysis.");
-        return []; // Gracefully proceed instead of halting
+        console.log("No active league transactions found (expected during off-season). Proceeding with newsroom production.");
     }
+    return "Off-season roster management and quiet league activity.";
 }
 
 async function getRealWorldNews() {
@@ -84,7 +87,7 @@ async function generateOffseasonArticle() {
     console.log(`Assigned columnist for this edition: ${selectedPersona.name}`);
 
     const nflNews = await getRealWorldNews();
-    await getSleeperTransactions();
+    const leagueActivity = await getSleeperTransactions();
     
     const prompt = `
     You are ${selectedPersona.name}, a veteran sports columnist reporting for the Columbia River Fantasy Football League (CRFFL) Network.
@@ -92,11 +95,14 @@ async function generateOffseasonArticle() {
     
     CRITICAL INSTRUCTIONS:
     - Write strictly as a human sports columnist. NEVER mention artificial intelligence, LLMs, algorithms, or automated scripts.
-    - Take the current real-world NFL news headlines below, analyze them, and explain how they dramatically impact our 24-man roster dynasty league, future draft capital, or upcoming strategy.
+    - Take the current real-world NFL news headlines and league activity below, analyze them, and explain how they dramatically impact our 24-man roster dynasty league, future draft capital, or upcoming strategy.
     - CRFFL league specifics: 24-man rosters, 6 IR slots, 4 practice squad slots.
     - Format the output in clean Markdown.
     - Include a catchy, sensationalist headline at the very top using a Markdown H1 tag (# Headline Here).
     - Length: Approximately 450-600 words.
+
+    Recent League Activity:
+    ${leagueActivity}
 
     Current Real-World NFL News Headlines:
     ${nflNews}
@@ -112,7 +118,7 @@ async function generateOffseasonArticle() {
 }
 
 async function publishArticle() {
-    console.log("Synthesizing and publishing fresh off-season article...");
+    console.log("Synthesizing and publishing fresh newsroom article...");
     
     const generated = await generateOffseasonArticle();
     if (!generated) {
@@ -121,7 +127,7 @@ async function publishArticle() {
     }
 
     const titleMatch = generated.text.match(/^#\s+(.*)/m);
-    const title = titleMatch ? titleMatch[1] : `Off-Season Dynasty Breakdown: What the Latest News Means for CRFFL`;
+    const title = titleMatch ? titleMatch[1] : `CRFFL Dynasty Breakdown: What the Latest News Means for Our League`;
     const bodyWithoutTitle = generated.text.replace(/^#\s+.*\n?/, '').trim();
 
     const { error } = await supabase
