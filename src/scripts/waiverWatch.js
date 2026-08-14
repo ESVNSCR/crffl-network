@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// Hardcoded league ID to bypass GitHub Actions secret mapping issues
+// Hardcoded league ID
 const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
@@ -31,13 +31,13 @@ const PERSONAS = [
 ];
 
 async function getSleeperTransactions() {
-    console.log(`Fetching Sleeper transactions for league ${SLEEPER_LEAGUE_ID}...`);
+    console.log(`Checking Sleeper transactions for league ${SLEEPER_LEAGUE_ID}...`);
     try {
         const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
         return response.data || [];
     } catch (error) {
-        console.log("Note: No active transactions found or off-season waiver window closed. Proceeding with news analysis.");
-        return [];
+        console.log("Note: Off-season window or active week not found. Bypassing transaction check and focusing on live news analysis.");
+        return []; // Gracefully proceed instead of halting
     }
 }
 
