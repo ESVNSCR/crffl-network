@@ -1,9 +1,4 @@
-name: CRFFL AI Newsroom Cronon:schedule:# Runs every Tuesday at 4:00 AM UTC (when NFL waivers typically clear)- cron: '0 4 * * 2'workflow_dispatch: # Allows you to trigger it manually anytime from GitHub!jobs:run-ai-newsroom:runs-on: ubuntu-lateststeps:- name: Checkout Codeuses: actions/checkout@v4  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '22'
-
-  - name: Install Dependencies
+- name: Install Dependencies
     run: npm install
 
   - name: Run Waiver Watch AI Script
