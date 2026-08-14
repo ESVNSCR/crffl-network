@@ -8,5 +8,3 @@
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       SLEEPER_LEAGUE_ID: ${{ secrets.SLEEPER_LEAGUE_ID }}
     run: node src/scripts/waiverWatch.js
-    #forcing fresh update
-    
