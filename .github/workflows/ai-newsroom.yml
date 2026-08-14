@@ -1,15 +1,29 @@
-- name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: '22'
+name: CRFFL AI Newsroom Cron
 
-  - name: Install Dependencies
-    run: npm install
+on:
+  schedule:
+    - cron: '0 4 * * 2'
+  workflow_dispatch:
 
-  - name: Run Waiver Watch AI Script
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      SLEEPER_LEAGUE_ID: ${{ secrets.SLEEPER_LEAGUE_ID }}
-    run: node src/scripts/waiverWatch.js
+jobs:
+  run-ai-newsroom:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Waiver Watch AI Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SLEEPER_LEAGUE_ID: ${{ secrets.SLEEPER_LEAGUE_ID }}
+        run: node src/scripts/waiverWatch.js
