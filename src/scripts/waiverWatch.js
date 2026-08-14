@@ -2,10 +2,14 @@ require('dotenv').config({ path: '.env.local' });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
+const axios = require('axios');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
+
+// Hardcoded league ID to bypass GitHub Actions secret mapping issues
+const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
     {
@@ -25,6 +29,17 @@ const PERSONAS = [
         style: 'Convinced that NFL coaching staffs, schedule makers, and injury reports are part of an elaborate psychological operation designed to ruin everyone’s fantasy rosters.'
     }
 ];
+
+async function getSleeperTransactions() {
+    console.log(`Fetching Sleeper transactions for league ${SLEEPER_LEAGUE_ID}...`);
+    try {
+        const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
+        return response.data || [];
+    } catch (error) {
+        console.log("Note: No active transactions found or off-season waiver window closed. Proceeding with news analysis.");
+        return [];
+    }
+}
 
 async function getRealWorldNews() {
     console.log("Fetching live real-world NFL news feeds...");
@@ -69,6 +84,7 @@ async function generateOffseasonArticle() {
     console.log(`Assigned columnist for this edition: ${selectedPersona.name}`);
 
     const nflNews = await getRealWorldNews();
+    await getSleeperTransactions();
     
     const prompt = `
     You are ${selectedPersona.name}, a veteran sports columnist reporting for the Columbia River Fantasy Football League (CRFFL) Network.
