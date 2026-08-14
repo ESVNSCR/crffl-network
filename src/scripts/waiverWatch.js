@@ -1,7 +1,5 @@
-// We need to load dotenv manually here since this script runs outside the Next.js frontend
 require('dotenv').config({ path: '.env.local' });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
 
@@ -9,80 +7,106 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// The ID for the current week. In a fully automated system, you'd calculate this dynamically based on the NFL schedule.
-// We'll set it to 1 for testing purposes.
-const CURRENT_WEEK = 1;
-
-async function getSleeperTransactions(week) {
-    console.log(`Fetching Sleeper transactions for week ${week}...`);
-    const url = `https://api.sleeper.app/v1/league/${process.env.SLEEPER_LEAGUE_ID}/transactions/${week}`;
-    try {
-        const response = await axios.get(url);
-        // We only care about completed waiver pickups and free agent moves, not trades or failed claims for this article
-        const moves = response.data.filter(t => t.status === 'complete' && (t.type === 'waiver' || t.type === 'free_agent'));
-        return moves;
-    } catch (error) {
-        console.error("Failed to fetch Sleeper data:", error);
-        return [];
+const PERSONAS = [
+    {
+        name: 'Buck Callahan',
+        style: 'Unapologetically biased, overly dramatic, convinced that Eric and his team "Rebel Scum" are masterminds of fantasy football destiny, and casually mentions the league barbecue on October 11 at 1:00 PM.'
+    },
+    {
+        name: 'Dr. Marcus Vance',
+        style: 'Obsessed with target shares, Expected Fantasy Points (xFP), win-probability metrics, and treats every casual roster move like a Wall Street hedge fund portfolio maneuver.'
+    },
+    {
+        name: 'Marty Sullivan',
+        style: 'Grumpy, traditionalist, values "grit", locker room culture, running backs who run between the tackles, and despises modern analytics with a fiery passion.'
+    },
+    {
+        name: 'Artie Pendelton',
+        style: 'Convinced that NFL coaching staffs, schedule makers, and injury reports are part of an elaborate psychological operation designed to ruin everyone’s fantasy rosters.'
     }
-}
+];
 
 async function getRealWorldNews() {
-    console.log("Fetching real-world NFL news context...");
+    console.log("Fetching live real-world NFL news feeds...");
     try {
-        // We use a generic fantasy football RSS feed to get current context
-        const feed = await parser.parseURL('https://www.rotowire.com/rss/news.htm?sport=nfl');
-        // Grab the top 5 most recent headlines to give the AI context without overwhelming the prompt
-        return feed.items.slice(0, 5).map(item => `${item.title}: ${item.contentSnippet}`).join('\n');
+        const feeds = [
+            'https://www.rotowire.com/rss/news.htm?sport=nfl',
+            'https://www.espn.com/espn/rss/nfl/news'
+        ];
+        
+        let allItems = [];
+        for (const url of feeds) {
+            try {
+                const feed = await parser.parseURL(url);
+                if (feed && feed.items) {
+                    allItems = allItems.concat(feed.items.slice(0, 4));
+                }
+            } catch (err) {
+                console.log(`Skipping feed due to network issue`);
+            }
+        }
+
+        if (allItems.length === 0) {
+            return "Off-season minicamps underway, contract extensions being negotiated, and rookies adjusting to training camp playbooks across the league.";
+        }
+
+        return allItems
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 6)
+            .map(item => `- ${item.title}: ${item.contentSnippet || item.summary || ''}`)
+            .join('\n');
     } catch (error) {
-        console.error("Failed to fetch RSS feed:", error);
-        return "No recent NFL news available.";
+        console.error("Failed to fetch RSS feeds, using general off-season baseline:", error);
+        return "NFL off-season workouts, OTA storylines, and contract talks dominating headlines.";
     }
 }
 
-async function generateBiasedArticle(transactions, nflNews) {
-    console.log("Handing data to Gemini for article generation...");
-    // Using gemini-1.5-flash as it is fast, cheap, and excellent at following specific tonal instructions
+async function generateOffseasonArticle() {
+    console.log("Generating fresh off-season analysis...");
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
     
-    const prompt = `
-    You are an opinionated, satirical sports journalist reporting on the latest waiver wire moves in the Columbia River Fantasy Football League (CRFFL). 
-    You claim to be impartial, fair, and balanced, but your undeniable truth is that the team "Rebel Scum" (managed by Eric) is the greatest assembled roster in sports history. 
-    Any move Eric makes is brilliant foresight. Any move other managers make is desperate or a waste of FAAB.
-    
-    CRFFL Specific Rules to Remember:
-    - We have 24-man rosters, 6 IR slots, and 4 practice squad slots.
-    - The Toilet Bowl is a combined points pool over a 3-week period, NOT a consolation bracket. Do not mention brackets.
-    - Casually hype up the upcoming league barbecue on October 11 at 1:00 PM.
+    const selectedPersona = PERSONAS[Math.floor(Math.random() * PERSONAS.length)];
+    console.log(`Assigned columnist for this edition: ${selectedPersona.name}`);
 
-    Here is the real-world NFL news this week:
+    const nflNews = await getRealWorldNews();
+    
+    const prompt = `
+    You are ${selectedPersona.name}, a veteran sports columnist reporting for the Columbia River Fantasy Football League (CRFFL) Network.
+    Your writing style guidelines: ${selectedPersona.style}
+    
+    CRITICAL INSTRUCTIONS:
+    - Write strictly as a human sports columnist. NEVER mention artificial intelligence, LLMs, algorithms, or automated scripts.
+    - Take the current real-world NFL news headlines below, analyze them, and explain how they dramatically impact our 24-man roster dynasty league, future draft capital, or upcoming strategy.
+    - CRFFL league specifics: 24-man rosters, 6 IR slots, 4 practice squad slots.
+    - Format the output in clean Markdown.
+    - Include a catchy, sensationalist headline at the very top using a Markdown H1 tag (# Headline Here).
+    - Length: Approximately 450-600 words.
+
+    Current Real-World NFL News Headlines:
     ${nflNews}
-    
-    Here are the league's waiver wire transactions for the week:
-    ${JSON.stringify(transactions)}
-    
-    Write a 500-word news article analyzing these moves. Format the output in Markdown. 
-    Make sure to include a catchy, sensationalist headline at the very top using a Markdown H1 tag (# Headline Here).
     `;
 
     try {
         const result = await model.generateContent(prompt);
-        return result.response.text();
+        return { text: result.response.text(), persona: selectedPersona.name };
     } catch (error) {
         console.error("Gemini failed to generate content:", error);
         return null;
     }
 }
 
-async function publishArticle(articleBody) {
-    console.log("Publishing article to Supabase database...");
+async function publishArticle() {
+    console.log("Synthesizing and publishing fresh off-season article...");
     
-    // We need to extract the title from the markdown to save it separately in the database
-    const titleMatch = articleBody.match(/^#\s+(.*)/m);
-    const title = titleMatch ? titleMatch[1] : `Waiver Wire Watch: Week ${CURRENT_WEEK}`;
-    
-    // Remove the title from the main body so it isn't displayed twice on the frontend
-    const bodyWithoutTitle = articleBody.replace(/^#\s+.*\n?/, '').trim();
+    const generated = await generateOffseasonArticle();
+    if (!generated) {
+        console.log("Skipping publication due to generation failure.");
+        return;
+    }
+
+    const titleMatch = generated.text.match(/^#\s+(.*)/m);
+    const title = titleMatch ? titleMatch[1] : `Off-Season Dynasty Breakdown: What the Latest News Means for CRFFL`;
+    const bodyWithoutTitle = generated.text.replace(/^#\s+.*\n?/, '').trim();
 
     const { error } = await supabase
         .from('articles')
@@ -90,7 +114,7 @@ async function publishArticle(articleBody) {
             { 
                 title: title, 
                 body: bodyWithoutTitle, 
-                author_persona: 'The Homer', 
+                author_persona: generated.persona, 
                 is_automated: true 
             }
         ]);
@@ -98,29 +122,8 @@ async function publishArticle(articleBody) {
     if (error) {
         console.error("Supabase Database error:", error.message);
     } else {
-        console.log("SUCCESS! Article published to the network.");
+        console.log(`SUCCESS! Published article authored by ${generated.persona}.`);
     }
 }
 
-async function runNewsroom() {
-    console.log("Starting the CRFFL Automated Newsroom...");
-    
-    const transactions = await getSleeperTransactions(CURRENT_WEEK);
-    
-    if (transactions.length === 0) {
-        console.log("No transactions found this week. Halting production.");
-        return;
-    }
-
-    const news = await getRealWorldNews();
-    const articleBody = await generateBiasedArticle(transactions, news);
-    
-    if (articleBody) {
-        await publishArticle(articleBody);
-    } else {
-        console.log("Article generation failed. Halting publication.");
-    }
-}
-
-// Run the script
-runNewsroom();
+publishArticle();
