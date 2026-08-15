@@ -2,7 +2,7 @@ require('dotenv').config({ path: '.env.local' });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
-// Removed axios entirely to use native fetch
+// REMOVED AXIOS ENTIRELY TO FIX OFF-SEASON CRASHING
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -33,6 +33,7 @@ const PERSONAS = [
 async function getSleeperTransactions() {
     console.log("Fetching Sleeper transactions for week 1...");
     try {
+        // Native fetch handles 404s cleanly without crashing the script
         const response = await fetch(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
 
         if (!response.ok) {
