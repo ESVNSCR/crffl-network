@@ -31,15 +31,25 @@ const PERSONAS = [
 ];
 
 async function getSleeperTransactions() {
-    console.log("Checking Sleeper league activity...");
+    console.log("Fetching Sleeper transactions for week 1...");
     try {
-        const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
+        // We add validateStatus to prevent Axios from crashing on 404 during the off-season.
+        const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`, {
+            validateStatus: function (status) {
+                return status < 500; // Resolve only if the status code is less than 500
+            }
+        });
+
+        if (response.status === 404) {
+             console.log("Off-season mode: No active transactions. Proceeding safely with newsroom production.");
+             return "Off-season roster management and quiet league activity.";
+        }
+
         if (response.data && response.data.length > 0) {
             return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
         }
     } catch (error) {
-        // This is the magic fix! It catches the 404 and prevents the script from crashing.
-        console.log("Off-season mode active (League week endpoint returned 404). Proceeding safely with newsroom production.");
+        console.log(`Sleeper API fetch failed, proceeding in off-season mode. Error: ${error.message}`);
     }
     return "Off-season roster management and quiet league activity.";
 }
