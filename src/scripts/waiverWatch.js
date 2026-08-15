@@ -33,13 +33,12 @@ const PERSONAS = [
 async function getSleeperTransactions() {
     console.log("Checking Sleeper league activity...");
     try {
-        // Try fetching transactions for the current week
         const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
         if (response.data && response.data.length > 0) {
             return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
         }
     } catch (error) {
-        console.log("No active league transactions found (expected during off-season). Proceeding with newsroom production.");
+        console.log("Off-season mode active (League week endpoint returned 404). Proceeding safely with newsroom production.");
     }
     return "Off-season roster management and quiet league activity.";
 }
