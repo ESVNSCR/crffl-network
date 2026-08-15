@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// Hardcoded league ID for the CRFFL
+// Hardcoded league ID to bypass GitHub Action secret masking
 const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
@@ -33,10 +33,10 @@ const PERSONAS = [
 async function getSleeperTransactions() {
     console.log("Fetching Sleeper transactions for week 1...");
     try {
-        // We add validateStatus to prevent Axios from crashing on 404 during the off-season.
+        // validateStatus prevents Axios from throwing a fatal error on 404 (Off-season)
         const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`, {
             validateStatus: function (status) {
-                return status < 500; // Resolve only if the status code is less than 500
+                return status < 500; 
             }
         });
 
@@ -127,7 +127,7 @@ async function generateOffseasonArticle() {
     }
 }
 
-async function publishArticle() {
+async function runNewsroom() {
     console.log("Synthesizing and publishing fresh newsroom article...");
     
     const generated = await generateOffseasonArticle();
@@ -158,4 +158,4 @@ async function publishArticle() {
     }
 }
 
-publishArticle();
+runNewsroom();
