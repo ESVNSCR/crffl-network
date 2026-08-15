@@ -2,7 +2,7 @@ require('dotenv').config({ path: '.env.local' });
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
-const axios = require('axios');
+// Removed axios entirely to use native fetch
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -33,20 +33,17 @@ const PERSONAS = [
 async function getSleeperTransactions() {
     console.log("Fetching Sleeper transactions for week 1...");
     try {
-        // validateStatus prevents Axios from throwing a fatal error on 404 (Off-season)
-        const response = await axios.get(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`, {
-            validateStatus: function (status) {
-                return status < 500; 
-            }
-        });
+        const response = await fetch(`https://api.sleeper.app/v1/league/${SLEEPER_LEAGUE_ID}/transactions/1`);
 
-        if (response.status === 404) {
-             console.log("Off-season mode: No active transactions. Proceeding safely with newsroom production.");
-             return "Off-season roster management and quiet league activity.";
+        if (!response.ok) {
+            console.log(`Off-season mode: Sleeper API returned ${response.status}. Proceeding safely with newsroom production.`);
+            return "Off-season roster management and quiet league activity.";
         }
 
-        if (response.data && response.data.length > 0) {
-            return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+            return data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
         }
     } catch (error) {
         console.log(`Sleeper API fetch failed, proceeding in off-season mode. Error: ${error.message}`);
@@ -70,7 +67,7 @@ async function getRealWorldNews() {
                     allItems = allItems.concat(feed.items.slice(0, 4));
                 }
             } catch (err) {
-                console.log(`Skipping feed due to network issue`);
+                console.log(`Skipping feed due to network issue: ${url}`);
             }
         }
 
