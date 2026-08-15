@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// Hardcoded league ID for the CRFFL
+// Hardcoded league ID for the CRFFL to prevent GitHub Secrets issues
 const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
@@ -38,6 +38,7 @@ async function getSleeperTransactions() {
             return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
         }
     } catch (error) {
+        // This catches the 404 during the off-season so the script doesn't crash!
         console.log("Off-season mode active (League week endpoint returned 404). Proceeding safely with newsroom production.");
     }
     return "Off-season roster management and quiet league activity.";
@@ -95,7 +96,7 @@ async function generateOffseasonArticle() {
     CRITICAL INSTRUCTIONS:
     - Write strictly as a human sports columnist. NEVER mention artificial intelligence, LLMs, algorithms, or automated scripts.
     - Take the current real-world NFL news headlines and league activity below, analyze them, and explain how they dramatically impact our 24-man roster dynasty league, future draft capital, or upcoming strategy.
-    - CRFFL league specifics: 24-man rosters, 6 IR slots, 4 practice squad slots.
+    - CRFFL league specifics: 10 team league, two divisions - Hood and St. Helens, Superflex, 18-man rosters, 2 IR slots, Starter spots QB,RB,RB,WR,WR,WR/RB/TE,WR/RB/TE,WR/TE,WR/RB/TE/QB,K,DEF.
     - Format the output in clean Markdown.
     - Include a catchy, sensationalist headline at the very top using a Markdown H1 tag (# Headline Here).
     - Length: Approximately 450-600 words.
