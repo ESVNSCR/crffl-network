@@ -8,7 +8,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const parser = new Parser();
 
-// Hardcoded league ID for the CRFFL to prevent GitHub Secrets issues
+// Hardcoded league ID for the CRFFL
 const SLEEPER_LEAGUE_ID = 'JK42W9PP7V070';
 
 const PERSONAS = [
@@ -38,7 +38,7 @@ async function getSleeperTransactions() {
             return response.data.slice(0, 5).map(tx => `- Waiver/Trade move processed in the league.`).join('\n');
         }
     } catch (error) {
-        // This catches the 404 during the off-season so the script doesn't crash!
+        // This is the magic fix! It catches the 404 and prevents the script from crashing.
         console.log("Off-season mode active (League week endpoint returned 404). Proceeding safely with newsroom production.");
     }
     return "Off-season roster management and quiet league activity.";
